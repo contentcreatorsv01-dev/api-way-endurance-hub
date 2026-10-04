@@ -1,12 +1,19 @@
 import { Router } from "express";
-import { createClient } from "@supabase/supabase-js";
+import { createClient, SupabaseClient } from "@supabase/supabase-js";
 
 const router = Router();
 
-const supabase = createClient(
-  process.env.SUPABASE_URL ?? "",
-  process.env.SUPABASE_KEY ?? ""
-);
+// Lazy initialization — env vars are available at request time on Vercel
+let _supabase: SupabaseClient | null = null;
+function getSupabase(): SupabaseClient {
+  if (!_supabase) {
+    const url = process.env.SUPABASE_URL;
+    const key = process.env.SUPABASE_KEY;
+    if (!url || !key) throw new Error("SUPABASE_URL and SUPABASE_KEY are required");
+    _supabase = createClient(url, key);
+  }
+  return _supabase;
+}
 
 const allowedObjectives = new Set(["5k", "10k", "consistency", "returning"]);
 const allowedLevels = new Set(["beginner", "intermediate", "advanced"]);
@@ -37,7 +44,7 @@ router.post("/way-profile", async (req, res) => {
   }
   const p = req.body;
   try {
-    const { data, error } = await supabase
+    const { data, error } = await getSupabase()
       .from("way_profiles")
       .upsert({
         device_id: p.deviceId,
