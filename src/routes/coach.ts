@@ -54,9 +54,14 @@ router.post("/chat", async (req: Request, res: Response) => {
     res.json(response);
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : "Unknown error";
+    console.error("Chat route error:", msg);
     if (msg.includes("authentication")) { res.status(401).json({ error: msg }); return; }
     if (msg.includes("rate limit")) { res.status(429).json({ error: msg }); return; }
-    res.status(500).json({ error: "Failed to process message. Try again." });
+    // Return actual error message in non-production for debugging
+    res.status(500).json({ 
+      error: "Failed to process message. Try again.",
+      detail: process.env.NODE_ENV !== "production" ? msg : undefined
+    });
   }
 });
 

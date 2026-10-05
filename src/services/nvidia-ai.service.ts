@@ -77,11 +77,28 @@ class NvidiaAIService {
   async chat(request: ChatRequest): Promise<ChatResponse> {
     if (!this.enabled) throw new Error("AI Coach not enabled. Configure NVIDIA_API_KEY.");
     const messages = this.buildMessages(request.coach, request.message, request.conversationHistory);
-    const response = await this.client.post("/chat/completions", {
-      model: this.model, messages, temperature: 0.7, top_p: 0.9, max_tokens: 512, stream: false,
-    });
-    const aiResponse = response.data.choices[0]?.message?.content ?? "Desculpe, não consegui processar.";
-    return { response: aiResponse, coach: request.coach, timestamp: new Date().toISOString(), tokensUsed: response.data.usage?.total_tokens };
+    try {
+      const response = await this.client.post("/chat/completions", {
+        model: this.model, messages, temperature: 0.7, top_p: 0.9, max_tokens: 512, stream: false,
+      });
+      const aiResponse = response.data.choices[0]?.message?.content ?? "Desculpe, não consegui processar.";
+      return { response: aiResponse, coach: request.coach, timestamp: new Date().toISOString(), tokensUsed: response.data.usage?.total_tokens };
+    } catch (error: unknown) {
+      // Log detailed error for debugging
+      if (axios.isAxiosError(error)) {
+        console.error("NVIDIA API Error:", {
+          status: error.response?.status,
+          data: JSON.stringify(error.response?.data),
+          message: error.message,
+          code: error.code,
+        });
+        if (error.response?.status === 401) throw new Error("NVIDIA API authentication failed.");
+        if (error.response?.status === 429) throw new Error("NVIDIA API rate limit exceeded.");
+        throw new Error(`NVIDIA API error: ${error.response?.status} - ${JSON.stringify(error.response?.data)}`);
+      }
+      console.error("Unknown error:", error);
+      throw error;
+    }
   }
 
   getGreeting(coach: CoachType): string {
