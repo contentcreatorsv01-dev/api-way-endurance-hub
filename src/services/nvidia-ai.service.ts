@@ -61,7 +61,7 @@ class NvidiaAIService {
     this.client = axios.create({
       baseURL: process.env.NVIDIA_API_URL ?? "https://integrate.api.nvidia.com/v1",
       headers: { Authorization: `Bearer ${this.apiKey}`, "Content-Type": "application/json" },
-      timeout: 30000,
+      timeout: 9000, // 9s — Vercel Hobby has 10s max execution time
     });
   }
 
@@ -78,7 +78,7 @@ class NvidiaAIService {
     if (!this.enabled) throw new Error("AI Coach not enabled. Configure NVIDIA_API_KEY.");
     const messages = this.buildMessages(request.coach, request.message, request.conversationHistory);
     const response = await this.client.post("/chat/completions", {
-      model: this.model, messages, temperature: 0.7, top_p: 0.9, max_tokens: 1024, stream: false,
+      model: this.model, messages, temperature: 0.7, top_p: 0.9, max_tokens: 512, stream: false,
     });
     const aiResponse = response.data.choices[0]?.message?.content ?? "Desculpe, não consegui processar.";
     return { response: aiResponse, coach: request.coach, timestamp: new Date().toISOString(), tokensUsed: response.data.usage?.total_tokens };
